@@ -1,5 +1,5 @@
  %% useful for cluster script, check the clusters between the 2 time series
-function [tvals, cluster_full, cluster_sum] = check_clusters(seriea, serieb, test, alpha, minlegth, want_plot, ylims, linewidth, colors)
+ function [tvals, cluster_full, cluster_sum] = check_clusters(seriea, serieb, test, alpha, minlegth, want_plot, want_reptangle, ylims, linewidth, colors)
     
     %%% seriea: first matrix subj * samplepoint
     %%% serieb: second matrix subj * samplepoint
@@ -34,8 +34,8 @@ function [tvals, cluster_full, cluster_sum] = check_clusters(seriea, serieb, tes
         color1 = sscanf(color1(2:end),'%2x%2x%2x',[1 3])/255;
         color2 = sscanf(color2(2:end),'%2x%2x%2x',[1 3])/255;
     catch
-        color1 = [0.2588 0.2863 0.2863];
-        color2 = [1 164/255 79/255];
+        color1 = [0.2588 0.2863 0.2863];    %#414949
+        color2 = [1 164/255 79/255];        
     end
     
     if strcmp(test, 'ttest')
@@ -249,16 +249,18 @@ function [tvals, cluster_full, cluster_sum] = check_clusters(seriea, serieb, tes
        end
 
 
-       %%% This creates a shaded rectangle for each cluster
-       if height(cluster_sum) > 0 
-           for this_cluster = 1:size(cluster_sum, 2)
-                hold on
-                clFirst = cluster_sum(1, this_cluster).first;
-                clLength = cluster_sum(1, this_cluster).length;
-                ylims = get(gca, 'Ylim');
-                rectangle('Position', [clFirst, ylims(1), clLength, sum(abs(ylims))], ...
-                            'FaceColor',[.5 .5 .5 .10], 'EdgeColor',[.5 .5 .5 .1])
+       %% This creates a shaded rectangle for each cluster
+       if want_reptangle
+           if height(cluster_sum) > 0
+               for this_cluster = 1:size(cluster_sum, 2)
+                   hold on
+                   clFirst = cluster_sum(1, this_cluster).first;
+                   clLength = cluster_sum(1, this_cluster).length;
+                   ylims = get(gca, 'Ylim');
+                   rectangle('Position', [clFirst, ylims(1), clLength, sum(abs(ylims))], ...
+                       'FaceColor',[.5 .5 .5 .10], 'EdgeColor',[.5 .5 .5 .1])
 
+               end
            end
        end
 

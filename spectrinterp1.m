@@ -8,9 +8,6 @@ function [cleansignal, Y] = spectrinterp1(signal, frequencies, fs)
     % Do fft
     Y = fft(signal);
 
-    % You will add random noise to the interpolated values (for the moment)
-    noise = 0.2;    
-
     % Loop through all the frequencies to interpolate
     for i = 1 : height(frequencies)
 
