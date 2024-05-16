@@ -17,7 +17,7 @@ try want_plot; catch want_plot = 0; end
 
 
 % Temporary errors untill i adjust the function
-% if strcmp(test, 'ttest2'); error('Maybe you can permute with two samples t tests but you need to adjust the function'); end
+if strcmp(test, 'ttest2'); error('Maybe you can permute with two samples t tests but you need to adjust the function'); end
 
 
 
@@ -46,37 +46,35 @@ if isempty(clusters)
 else
     %%%%%%%%%%%%%%%%%% Permutations %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     cluster_mass = [];                                                  %you will have the cluster masses for each permutation here
-                           
+    serie = cat(3, seriea, serieb);                                     %build a structure subject x time point x condition (this is actually not a necessary passage)
     for rep = 1:iter
-        %%% If t-test between subjects
+        
         if strcmp(test, 'ttest2')
             
-            %%% Join and permute the dataset
+            heightb = height(serieb)
+
+
             serie = [seriea; serieb];
-            serie = serie(randperm(height(serie)), :, :);
             
-            %%% Split the permuted dataset to mantain the original proportion
-            serieap = serie(1 : height(seriea), :, :);
-            seriebp = serie((height(seriea)+1):end, :, :);
+            ser
+
+            serieap = 
+
+
+            min(height(seriea), height(serieb))
+
+            to_perm = randsample(min(height(seriea), height(serieb)), 1);
+            randi(2,1,to_perm)-1
             
-            %%% Check clusters
-            [~, clusters_per] = check_clusters(serieap(:,:), seriebp(:,:), test, alpha, minlegth, 0);
-        
-            
-        %%% If within subjects (here I include tests against 0)
+
+
+
         else
-            %%% Build a structure subject x time point x condition (this is actually not a necessary passage)
-            serie = cat(3, seriea, serieb);
+            perm_serie = serie;                                             %the serie that will be permuted
+            randomed = randi(2, 1, size(serie,1));                          %randomize which participant to switch
+            perm_serie(find(randomed == 2), :, [1 2]) = perm_serie(find(randomed == 2), :, [2 1]);  %switch condition (third dimension of the array) for the above participants
 
-            %%% Series that will be permuted
-            perm_serie = serie;                                            
-
-            %%% Randomize for which participants to switch labels and then switch labels
-            randomed = randi(2, 1, size(serie,1));                          
-            perm_serie(find(randomed == 2), :, [1 2]) = perm_serie(find(randomed == 2), :, [2 1]);  
-            
-            %%% Check clusters
-            [~, clusters_per] = check_clusters(perm_serie(:,:,1), perm_serie(:,:,2), test, alpha, minlegth, 0); 
+            [~, clusters_per] = check_clusters(perm_serie(:,:,1), perm_serie(:,:,2), test, alpha, minlegth, 0); %check clusters for the permuted serie (for this iteraction)
         end
 
         if ~isempty(clusters_per)                                       %if you find clusters ...
@@ -97,7 +95,7 @@ else
         else
             cluster_mass = [cluster_mass, 0];                           %if you find no cluster the cluster mass is zero
         end
-        if ismember(rep, [0:iter/10:iter]); disp([num2str(rep), '/', num2str(iter)]); end %this line just tells you how many iterations have been done, one 10th at the time
+        if ismember(rep, [0:iter/10:iter]); disp([num2str(rep), '/', num2str(iter)]); end %this line just tells you how many iterations have been done
     end
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 

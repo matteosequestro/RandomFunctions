@@ -84,7 +84,7 @@
 
 
 
-   %%%%%%%%%%%%%%%%%%%%%%%%%%  Not using this for the moment. If uncommented will merge clusters closer than 'mergetreshold' from each other
+%    %%%%%%%%%%%%%%%%%%%%%%%%%  Not using this for the moment. If uncommented will merge clusters closer than 'mergetreshold' from each other
 %    mergethreshold = 10;
 %    clusterSet = [];
 %    for win = 1 : size(cluster_full, 2)
@@ -212,19 +212,19 @@
 %                 CIb_low = cib(1, :);
 %                 CIb_up = cia(2, :);
 
-%            ts = tinv([0.025  0.975], height(seriea)-1);      % T-Score
+           ts = tinv([0.025  0.975], height(seriea)-1);      % T-Score
 %     
-%            CIa_low = average_seriea + ts(1) * SEMa;
-%            CIa_up = average_seriea + ts(2) * SEMa;
-%         
-%            CIb_low = average_serieb + ts(1) * SEMb;
-%            CIb_up = average_serieb + ts(2) * SEMb;
+           CIa_low = average_seriea + ts(1) * SEMa;
+           CIa_up = average_seriea + ts(2) * SEMa;
+        
+           CIb_low = average_serieb + ts(1) * SEMb;
+           CIb_up = average_serieb + ts(2) * SEMb;
 
-           CIa_low = average_seriea - SEMa;
-           CIa_up = average_seriea + SEMa;
-
-           CIb_low = average_serieb - SEMb;
-           CIb_up = average_serieb + SEMb;
+%            CIa_low = average_seriea - SEMa;
+%            CIa_up = average_seriea + SEMa;
+% 
+%            CIb_low = average_serieb - SEMb;
+%            CIb_up = average_serieb + SEMb;
 
 
            %%% If you made a mistake
@@ -265,7 +265,7 @@
        end
 
 
-%%% This will create a shade between the two lines for each cluster (instead of the rectangle, may look nice)
+%%% This will create a shade between the two lines for each cluster (instead of the rectangle: uncommon but it may look nice)
 %        for this_cluster = 1:size(cluster_full, 2)
 %            if height(cluster_full{this_cluster}) > 1
 %                hold on
