@@ -1,8 +1,10 @@
 %%% compute averages and within errors (se and ci) over time-series
 
-function [fin] = within_error(set, series, pID, conditions, ci_lims, want_plot, errortype, colors)
+function [fin] = within_error(set, series, pID, conditions, ci_lims, want_plot, wantpatch, errortype, colors)
 %%% ----------------------------------------------------------------------------------------------------------------------------------------------
-%%% set         : full dataset having at least a column for ID, x columns for the condition you want to average over, and one column with the time series in a cell
+%%% set         : full dataset having at least a column for ID, x columns
+%%% for the condition you want to average over, and one column with the
+%%% time series in a cell. Each row is a trial
 %%% series      : the column with the time series
 %%% pID         : the column with the IDs (or the clustering variable in general)
 %%% conditions  : string array with the name of the conditions you want to average over (e.g., ["condition", "valence"]
@@ -16,19 +18,27 @@ function [fin] = within_error(set, series, pID, conditions, ci_lims, want_plot, 
 %%% like this: colors = ['#C0C0C0';'#808080'; '#000000';'#FFA500'; '#A52A2A';'#800000'];
 
 %%% ci_lims     : limits for the confidence interval. default is ci_lims = [0.025, 0.975] for a 95% CI
+
+
+%%% EXAMPLE OF USE:
+%%% within_error(out, "cutInterpHrLinearBC", "id", ["condition", "valence"], [], 1, 1);
+%%% or 
+%%% within_error(out, "cutInterpHrLinearBC", "id", "valence", [], 1, 1);
 %%% ----------------------------------------------------------------------------------------------------------------------------------------------
 
 
 %%% --------------------------------------------------------------------------------------------------
 %%% Set Defaults
 %%% --------------------------------------------------------------------------------------------------
-if ~exist("ci_lims", 'var'); ci_lims = [0.025, 0.975]; end
-if ~exist("want_plot", 'var'); want_plot = 0; end
+if ~exist("ci_lims", 'var') || isempty(ci_lims); ci_lims = [0.025, 0.975]; end
+if ~exist("want_plot", 'var') || isempty(ci_lims); want_plot = 0; end
 
 
 %%% --------------------------------------------------------------------------------------------------
 %%% Take the columns for conditions
 %%% --------------------------------------------------------------------------------------------------
+series = set{:, series};
+pID = set{:,pID};
 conditions_tot = zeros(height(set), length(conditions));
 for ll = 1 : length(conditions)
     conditions_tot(:, ll) = cell2mat(set{:, conditions(ll)});
@@ -112,9 +122,8 @@ exp_ind_means.Properties.VariableNames = [{'id'} conds_combinations.Properties.V
 %%% --------------------------------------------------------------------------------------------------
 %%% Compute within errors
 %%% --------------------------------------------------------------------------------------------------
-fin = cell(height(conds_combinations), 7);
+fin = cell(height(conds_combinations), (5 + width(conds_combinations)));
 for rr = 1 : height(conds_combinations)
-
     this_cond           = exp_ind_means(ismember(exp_ind_means(:, conds_combinations.Properties.VariableNames), conds_combinations(rr, :)), :);
     this_cond_mean      = nanmean(this_cond.mean_series, 1);
 
@@ -137,8 +146,17 @@ fin.Properties.VariableNames = [conds_combinations.Properties.VariableNames, {'m
 %%% Plot (if you want)
 %%% --------------------------------------------------------------------------------------------------
 if want_plot
-    if height(colors) ~= height(fin)
-        error(['You need to provide ', num2str(height(fin)), ' colors, but you have ', num2str(height(colors))  ]);
+    % Provide default color if not provided as argument. Give an error if
+    % they are not enough to cover all conditions
+    if ~exist('colors', 'var')
+        colors = ['#C0C0C0';'#808080'; '#000000';'#FFA500'; '#A52A2A';'#800000'];
+        if height(colors) < height(fin)
+            error(['You need to provide ', num2str(height(fin)), ' colors, but you only have ', num2str(height(colors)) ' by default. You need to provide colors manually' ]);
+        end
+    else
+        if height(colors) < height(fin)
+            error(['You need to provide ', num2str(height(fin)), ' colors, but you only have ', num2str(height(colors))  ]);
+        end
     end
     
     % I couldn't make the function I use for plotting CIs to accept
@@ -152,6 +170,9 @@ if want_plot
     mean_line = fin.mean_series;
     
     % Define the patches depending on which error you want
+    if ~exist('errortype', 'var'); errortype = "se"; end % set standard error as default error type
+    if ~exist('wantpatch', 'var'); wantpatch = 1; end % set standard error as default error type
+
     if strcmp(errortype, "se")
         up_lim = fin.se_up;
         low_lim = fin.se_low;
@@ -171,15 +192,14 @@ if want_plot
         dispname((end-2):end) = [];
         
         % Plot this condition
-        patch([time, fliplr(time)], [low_lim(rr,:), fliplr(up_lim(rr,:))], colors_rgb{rr},'FaceAlpha',0.2, 'EdgeColor','none', 'HandleVisibility', 'off')
+        if wantpatch; patch([time, fliplr(time)], [low_lim(rr,:), fliplr(up_lim(rr,:))], colors_rgb{rr},'FaceAlpha',0.2, 'EdgeColor','none', 'HandleVisibility', 'off'); end
         hold on
         plot(mean_line(rr,:), 'Color', colors_rgb{rr}, 'LineWidth', 2, 'DisplayName',dispname)
     end
+    xlim([1, max(time)]);
     legend('Location', 'eastoutside')
 
 end
-
-
 
 
 end

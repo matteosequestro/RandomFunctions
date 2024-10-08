@@ -1,11 +1,12 @@
-%%% compute averages and within errors (se and ci) over time-series
+%%% compute averages and within errors (se and ci) over time-series, then
+%%% plot them
 
-function [fin] = within_error(set, series, pID, conditions, ci_lims, want_plot, errortype, colors)
+function [fin] = within_error(set, series, pID, conditions, ci_lims, want_plot, wantpatch, errortype, colors)
 %%% ----------------------------------------------------------------------------------------------------------------------------------------------
-%%% set         : full dataset having at least a column for ID, x columns for the condition you want to average over, and one column with the time series in a cell
-%%% series      : the column with the time series
-%%% pID         : the column with the IDs (or the clustering variable in general)
-%%% conditions  : string array with the name of the conditions you want to average over (e.g., ["condition", "valence"]
+%%% set         : full dataset having at least a column for ID, x columns for the condition(s) you want to average over, and one column with the time series in a cell. Each row is a trial
+%%% series      : the name of column with the time series
+%%% pID         : the nale of column with the IDs (or the clustering variable in general)
+%%% conditions  : string array with the name of the names of the conditions you want to average over (e.g., ["condition", "valence"])
 %%% want_plot   : 0 if you don't want a plot of the series, 1 if you do
 
 %%% errortype   : "se" for standard error, "ci" for confidence interval. This
@@ -16,22 +17,36 @@ function [fin] = within_error(set, series, pID, conditions, ci_lims, want_plot, 
 %%% like this: colors = ['#C0C0C0';'#808080'; '#000000';'#FFA500'; '#A52A2A';'#800000'];
 
 %%% ci_lims     : limits for the confidence interval. default is ci_lims = [0.025, 0.975] for a 95% CI
+
+
+%%% EXAMPLE OF USE:
+%%% within_error(out, "cutInterpHrLinearBC", "id", ["condition", "valence"], [], 1, 1);
+%%% or 
+%%% within_error(out, "cutInterpHrLinearBC", "id", "valence", [], 1, 1);
 %%% ----------------------------------------------------------------------------------------------------------------------------------------------
 
 
 %%% --------------------------------------------------------------------------------------------------
 %%% Set Defaults
 %%% --------------------------------------------------------------------------------------------------
-if ~exist("ci_lims", 'var'); ci_lims = [0.025, 0.975]; end
-if ~exist("want_plot", 'var'); want_plot = 0; end
+if ~exist("ci_lims", 'var') || isempty(ci_lims); ci_lims = [0.025, 0.975]; end
+if ~exist("want_plot", 'var') || isempty(want_plot); want_plot = 1; end
+if ~exist("errortype", 'var') || isempty(errortype); errortype = "ci"; end
 
 
 %%% --------------------------------------------------------------------------------------------------
 %%% Take the columns for conditions
 %%% --------------------------------------------------------------------------------------------------
+series = set{:, series};
+pID = set{:,pID};
 conditions_tot = zeros(height(set), length(conditions));
 for ll = 1 : length(conditions)
-    conditions_tot(:, ll) = cell2mat(set{:, conditions(ll)});
+
+    if iscell(set{:, conditions(ll)})
+        conditions_tot(:, ll) = cell2mat(set{:, conditions(ll)});
+    else
+        conditions_tot(:, ll) = set{:, conditions(ll)};
+    end
 end
 
 
@@ -68,7 +83,7 @@ end
 %%% --------------------------------------------------------------------------------------------------
 %%% create adjusted values for each variable (this should give same the mean, but adjusted error)
 %%% --------------------------------------------------------------------------------------------------
-adjusted_series = cell2mat(series) - cell2mat(tadj_factor);
+adjusted_series = cell2mat(series) + cell2mat(tadj_factor);
 
 
 %%% --------------------------------------------------------------------------------------------------
@@ -114,11 +129,11 @@ exp_ind_means.Properties.VariableNames = [{'id'} conds_combinations.Properties.V
 %%% --------------------------------------------------------------------------------------------------
 fin = cell(height(conds_combinations), (5 + width(conds_combinations)));
 for rr = 1 : height(conds_combinations)
-
     this_cond           = exp_ind_means(ismember(exp_ind_means(:, conds_combinations.Properties.VariableNames), conds_combinations(rr, :)), :);
     this_cond_mean      = nanmean(this_cond.mean_series, 1);
 
     this_cond_se        = nanstd(this_cond.mean_series) / sqrt(height(this_cond));
+    % this_cond_se        = nanstd(this_cond.mean_series) / sqrt(height(exp_ind_means));
 
     this_cond_se_low    = this_cond_mean - this_cond_se;
     this_cond_se_up     = this_cond_mean + this_cond_se;
@@ -137,50 +152,9 @@ fin.Properties.VariableNames = [conds_combinations.Properties.VariableNames, {'m
 %%% Plot (if you want)
 %%% --------------------------------------------------------------------------------------------------
 if want_plot
-    if height(colors) < height(fin)
-        error(['You need to provide ', num2str(height(fin)), ' colors, but you have ', num2str(height(colors))  ]);
-    end
-    
-    % I couldn't make the function I use for plotting CIs to accept
-    % hexadecimal colors, so this is converting them in RGB
-    colors_rgb = cell(height(colors), 1);
-    for col = 1 : height(colors)
-        colors_rgb(col)  = {sscanf(colors(col, 2:end),'%2x%2x%2x',[1 3])/255};
-    end
-    
-    % Big Line (mean) 
-    mean_line = fin.mean_series;
-    
-    % Define the patches depending on which error you want
-    if strcmp(errortype, "se")
-        up_lim = fin.se_up;
-        low_lim = fin.se_low;
-    elseif strcmp(errortype, "ci")
-        up_lim = fin.ci_up;
-        low_lim = fin.ci_low;
-    end
-    
-    % Plot each condition
-    time = 1:width(fin.mean_series);
-    for rr = 1  : height(fin)
-        % Define legend name for this condition
-        dispname= '';
-        for nn = 1 : (width(fin) - 5)
-        dispname = [dispname, [ fin.Properties.VariableNames{nn} ': ' num2str(fin{rr,nn}) ,' | '] ];
-        end
-        dispname((end-2):end) = [];
-        
-        % Plot this condition
-        patch([time, fliplr(time)], [low_lim(rr,:), fliplr(up_lim(rr,:))], colors_rgb{rr},'FaceAlpha',0.2, 'EdgeColor','none', 'HandleVisibility', 'off')
-        hold on
-        plot(mean_line(rr,:), 'Color', colors_rgb{rr}, 'LineWidth', 2, 'DisplayName',dispname)
-    end
-    xlim([1, max(time)]);
-    legend('Location', 'eastoutside')
+ plot_within_error(fin)
 
 end
-
-
 
 
 end
