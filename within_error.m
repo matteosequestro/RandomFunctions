@@ -1,7 +1,7 @@
 %%% compute averages and within errors (se and ci) over time-series, then
 %%% plot them
 
-function [fin] = within_error(set, series, pID, conditions, ci_lims, want_plot, wantpatch, errortype, colors)
+function [fin, exp_ind_means] = within_error(set, series, pID, conditions, ci_lims, want_plot, wantpatch, errortype, colors)
 %%% ----------------------------------------------------------------------------------------------------------------------------------------------
 %%% set         : full dataset having at least a column for ID, x columns for the condition(s) you want to average over, and one column with the time series in a cell. Each row is a trial
 %%% series      : the name of column with the time series
@@ -128,9 +128,12 @@ exp_ind_means.Properties.VariableNames = [{'id'} conds_combinations.Properties.V
 %%% Compute within errors
 %%% --------------------------------------------------------------------------------------------------
 fin = cell(height(conds_combinations), (5 + width(conds_combinations)));
+
 for rr = 1 : height(conds_combinations)
+    
     this_cond           = exp_ind_means(ismember(exp_ind_means(:, conds_combinations.Properties.VariableNames), conds_combinations(rr, :)), :);
     this_cond_mean      = nanmean(this_cond.mean_series, 1);
+
 
     this_cond_se        = nanstd(this_cond.mean_series) / sqrt(height(this_cond));
     % this_cond_se        = nanstd(this_cond.mean_series) / sqrt(height(exp_ind_means));
