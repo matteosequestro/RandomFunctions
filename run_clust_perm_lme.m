@@ -30,6 +30,10 @@ function [cluster_mass, obs_clusters_sum] = run_clust_perm_lme(data, formula, va
 %                           reptangles. 0 if you don't want such a plot.
 % cfg.perm_alpha        : permutation alpha. Montecarlo p-values below such
 %                           a value will be considered as significant.
+% cfg.want_parallel_fit : 1 will fi the models across different time-points
+%                           in parallel (much faster but computationally
+%                           more expensive); 0 will do one point at the
+%                           time.
 %
 % OUTPUTS:
 % modelout              : ouput of the model on true dataset (i.e., not 
@@ -50,7 +54,7 @@ function [cluster_mass, obs_clusters_sum] = run_clust_perm_lme(data, formula, va
 
 
 % Findclusters in the observed data
-[modelout, obs_clusters_sum, ~,obs_clusters_t] =check_clusters_lme(data, formula, cfg);
+[modelout, obs_clusters_sum, ~ ,obs_clusters_t] = check_clusters_lme(data, formula, cfg);
 npar = height(modelout.pars.estimates); % number of parameters (or coefficients)
 tslen = width(modelout.pars.estimates); % length of the time-series
 
@@ -82,7 +86,7 @@ for rep = 1:cfg.niter
 
 
     % Find clusters in the permuted data
-    [~, ~,~, per_clusters_t] =check_clusters_lme(perm_data, formula, cfg);
+    [~, ~, per_clusters_t] =check_clusters_lme(perm_data, formula, cfg);
 
     % Compute t-masses for each predictor in the "permutation model"
     for pred = 1 : height(per_clusters_t)

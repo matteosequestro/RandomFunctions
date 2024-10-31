@@ -38,6 +38,7 @@ function plot_within_error(fin, colors)
     end
     
     % Plot each condition
+    figure
     time = 1:width(fin.mean_series);
     for rr = 1  : height(fin)
         % Define legend name for this condition

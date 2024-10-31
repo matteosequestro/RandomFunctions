@@ -33,7 +33,7 @@ if ~exist("ci_lims", 'var') || isempty(ci_lims); ci_lims = [0.025, 0.975]; end
 if ~exist("want_plot", 'var') || isempty(want_plot); want_plot = 1; end
 if ~exist("errortype", 'var') || isempty(errortype); errortype = "ci"; end
 
-
+idvar = pID;
 %%% --------------------------------------------------------------------------------------------------
 %%% Take the columns for conditions
 %%% --------------------------------------------------------------------------------------------------
@@ -106,8 +106,8 @@ conds_combinations.Properties.VariableNames = conditions;
 % Mean for each combination
 exp_ind_means = [];
 for pp = 1 : length(upID)
-    this_pp = adjusted_series(strcmp(set.id, upID(pp)), :);
-    conditions_pp = conditions_tot(strcmp(set.id, upID(pp)), :);
+    this_pp = adjusted_series(strcmp(set.(idvar), upID(pp)), :);
+    conditions_pp = conditions_tot(strcmp(set.(idvar), upID(pp)), :);
     for rr = 1 : height(conds_combinations)
         export = cell(1, width(conds_combinations) + 2);
 
