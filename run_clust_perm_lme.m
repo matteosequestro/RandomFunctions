@@ -1,6 +1,6 @@
 
 % this require the check_clusters_lme function
-function [cluster_mass, obs_clusters_sum] = run_clust_perm_lme(data, formula, variablesToPermute, idvar, cfg)
+function [modelout, cluster_mass, obs_clusters_sum] = run_clust_perm_lme(data, formula, variablesToPermute, idvar, cfg)
 % ----------------------------------------------------------------------------------------------------------------------------------------------
 % Performs cluster based correction on parameter estimates from linear mixed
 % effect model on a time-series
@@ -52,6 +52,7 @@ function [cluster_mass, obs_clusters_sum] = run_clust_perm_lme(data, formula, va
 %                           of the cluster and t-mass.
 % ----------------------------------------------------------------------------------------------------------------------------------------------
 
+cfg.wantplot_fit = 0;
 
 % Findclusters in the observed data
 [modelout, obs_clusters_sum, ~ ,obs_clusters_t] = check_clusters_lme(data, formula, cfg);
@@ -112,7 +113,7 @@ for pp = 1 : height(obs_clusters_t)
     tps = zeros(1, length(tpred));
     for mm = 1:length(tpred)
         obsmass = sum(abs(tpred{mm}(:,1)));
-        mcp = sum(abs(tperm_pred) > obsmass) / length(tperm_pred); %compute the p as the percentage of |permuted t masses| greater than the observed |tmass|
+        mcp = mean(abs(tperm_pred) > obsmass); %compute the p as the percentage of |permuted t masses| greater than the observed |tmass|
         tps(mm) = mcp;
     end
     obs_clusters_sum(pp).pval = tps;
@@ -150,11 +151,16 @@ if cfg.wantplot_perm
                 rectColor =[0.3569 0.6078 0.8353];
             end
             rectangle('Position', [clFirst, ylims(1), clLength, sum(abs(ylims))], ...
-                'FaceColor', [rectColor .10], 'EdgeColor',[rectColor .1])
+                'FaceColor', [rectColor .10], 'EdgeColor',[rectColor .1], 'FaceAlpha', .2)
         end
 
         xlim([1,    tslen])
+        ax = gca; % Get current axis handle
+        ax.XTickLabel = ax.XTick / cfg.fs; % Divide by 10
+        xlabel("time (s)")
+        box on
     end
+
 
 end
 

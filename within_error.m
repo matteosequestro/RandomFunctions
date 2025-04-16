@@ -155,7 +155,7 @@ fin.Properties.VariableNames = [conds_combinations.Properties.VariableNames, {'m
 %%% Plot (if you want)
 %%% --------------------------------------------------------------------------------------------------
 if want_plot
- plot_within_error(fin)
+    plot_within_error(fin, errortype)
 
 end
 
