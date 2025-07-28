@@ -55,7 +55,9 @@ function [modelout, cluster_mass, obs_clusters_sum] = run_clust_perm_lme(data, f
 cfg.wantplot_fit = 0;
 
 % Findclusters in the observed data
-[modelout, obs_clusters_sum, ~ ,obs_clusters_t] = check_clusters_lme(data, formula, cfg);
+
+% [modelout, cluster_beta_exp, cluster_t_exp, cluster_sum]
+[modelout, ~ ,obs_clusters_t, obs_clusters_sum] = check_clusters_lme(data, formula, cfg);
 npar = height(modelout.pars.estimates); % number of parameters (or coefficients)
 tslen = width(modelout.pars.estimates); % length of the time-series
 
@@ -106,17 +108,24 @@ for rep = 1:cfg.niter
 
 end
 
+
 %% Compute  monte-carlo p values
 for pp = 1 : height(obs_clusters_t)
     tpred = obs_clusters_t{pp, 2};
     tperm_pred = cluster_mass{pp,2};
-    tps = zeros(1, length(tpred));
-    for mm = 1:length(tpred)
-        obsmass = sum(abs(tpred{mm}(:,1)));
-        mcp = mean(abs(tperm_pred) > obsmass); %compute the p as the percentage of |permuted t masses| greater than the observed |tmass|
-        tps(mm) = mcp;
-    end
-    obs_clusters_sum(pp).pval = tps;
+    obsmass = cellfun(@(x) sum(abs(x(:,1))),  tpred); % masses for each found cluster for this predictor
+    obs_clusters_sum(pp).pval = arrayfun(@(x) mean(abs(tperm_pred) > x), obsmass);
+    % tps = cell(1, length(tpred));
+    %
+    % for mm = 1:length(tpred)
+    %     obsmass = cellfun(@(x) sum(abs(x(:,1))),  tpred); % masses for each found cluster for this predictor
+    %     tps{mm} = arrayfun(@(x) mean(abs(tperm_pred) > x), obsmass);
+    % 
+    %     % obsmass = sum(abs(tpred{mm}(:,1)));
+    %     % mcp = mean(abs(tperm_pred) > obsmass); %compute the p as the percentage of |permuted t masses| greater than the observed |tmass|
+    %     % tps{mm} = mcp;
+    % end
+    % obs_clusters_sum(pp).pval = tps;
 end
 
 

@@ -33,7 +33,7 @@ if ~exist("ci_lims", 'var') || isempty(ci_lims); ci_lims = [0.025, 0.975]; end
 if ~exist("want_plot", 'var') || isempty(want_plot); want_plot = 1; end
 if ~exist("errortype", 'var') || isempty(errortype); errortype = "ci"; end
 
-idvar = pID;
+idvar= pID;
 %%% --------------------------------------------------------------------------------------------------
 %%% Take the columns for conditions
 %%% --------------------------------------------------------------------------------------------------
@@ -155,8 +155,11 @@ fin.Properties.VariableNames = [conds_combinations.Properties.VariableNames, {'m
 %%% Plot (if you want)
 %%% --------------------------------------------------------------------------------------------------
 if want_plot
-    plot_within_error(fin, errortype)
-
+    try
+        plot_within_error(fin, errortype, colors)
+    catch
+            plot_within_error(fin, errortype)
+    end
 end
 
 

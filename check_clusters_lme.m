@@ -1,5 +1,5 @@
 
-function [modelout, cluster_sum, cluster_beta_exp, cluster_t_exp] = check_clusters_lme(data, formula, cfg)
+function [modelout, cluster_beta_exp, cluster_t_exp, cluster_sum] = check_clusters_lme(data, formula, cfg)
 % ----------------------------------------------------------------------------------------------------------------------------------------------
 % Find clusters of effect from parameter estimates in a linear mixed
 % effect model on a time-series
@@ -152,7 +152,9 @@ if cfg.wantplot_fit
     % Provide default color if not provided as argument. Give an error if
     % they are not enough to cover all coefficients
     if ~isfield(cfg, 'colors')
-        colors = ['#C0C0C0';'#808080'; '#000000';'#FFA500'; '#A52A2A';'#800000'];
+        colors = ['#C0C0C0'; '#808080'; '#000000'; '#FFA500'; '#A52A2A'; '#800000'; ...
+          '#1f77b4'; '#2ca02c'; '#d62728'; '#9467bd'];
+        
         if height(colors) < npars
             error(['You need to provide ', num2str(npars), ' colors, but you only have ', num2str(height(colors)) ' by default. You need to provide colors manually' ]);
         end
@@ -271,6 +273,7 @@ for pred = 1 : npars
     cluster_sum(pred,:).first   = cellfun(@(x) x(1, 2), cluster_full_beta);
     cluster_sum(pred,:).last    = cellfun(@(x) x(end, 2), cluster_full_beta);
     cluster_sum(pred,:).mass   = cellfun(@(x) sum(x(:,1)), cluster_full_beta);
+    cluster_sum(pred,:).abs_mass   = cellfun(@(x) sum(abs(x(:,1))), cluster_full_beta);
 
     if isempty(cluster_full_beta); cluster_full_beta = {NaN}; end
     if isempty(cluster_full_t); cluster_full_t = {NaN}; end
