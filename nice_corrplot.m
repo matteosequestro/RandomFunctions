@@ -1,15 +1,17 @@
 function f1 = nice_corrplot(x,y, xlab, ylab, titles)
 
-
 if width(x) == 1 && width(y) == 1
-    ccc = round(concordance_correlation_coefficient(x,y), 2);
-    cc = round(corr(x,y), 2);
-
+    ccc     = round(concordance_correlation_coefficient(x,y), 2);           % Concordance Correlation Coefficient
+    cc      = round(corr(x,y), 2);                                          % Simple pearson correlation
+    boot_ci = corr_boot(x,y);                                               % Bootstrap confident interval for the correlation
+    
+    % Plot the rest
     mdl = fitlm(x,y);
 
     close all
     f1 = figure;
-    scatter(x,y, 'o', 'filled', 'MarkerFaceColor', [255 178 102]/255, 'MarkerFaceAlpha', 0.8, 'SizeData', 15)
+    scatter(x,y, 'o', 'filled', 'MarkerFaceColor', [255 178 102]/255, ...
+        'MarkerFaceAlpha', 0.8, 'SizeData', 30)
     hold on
 
     xq = linspace(min(x), max(x), 100)'; % sorted x values for smooth line
@@ -37,8 +39,7 @@ if width(x) == 1 && width(y) == 1
 
     Y1 = quantile(distances, .2) ;
     Y2 = quantile(distances, .1) ;
-
-    text(0.95*xL(2),Y1,['r=', num2str(cc)],'HorizontalAlignment','right','VerticalAlignment','bottom')
+    text(0.95*xL(2),Y1, sprintf('r=%.2f [%.2f, %.2f]', cc, boot_ci(1), boot_ci(2)),'HorizontalAlignment','right','VerticalAlignment','bottom')
     text(0.95*xL(2), Y2,['ccc=', num2str(ccc)],'HorizontalAlignment','right','VerticalAlignment','bottom')
     box on
     title('')
@@ -50,6 +51,8 @@ else
         nexttile
         ccc = round(concordance_correlation_coefficient(x(:,pp), y(:,pp)), 2);
         cc = round(corr(x(:,pp), y(:,pp)), 2);
+        boot_ci = corr_boot(x(:,pp),y(:,pp));                                               % Bootstrap confident interval for the correlation
+
 
         mdl = fitlm(x(:,pp), y(:,pp));
 
@@ -81,7 +84,8 @@ else
 
         Y1 = quantile(distances, .2) ;
         Y2 = quantile(distances, .1) ;
-        text(0.95*xL(2), Y1,['r=', num2str(cc)],'HorizontalAlignment','right','VerticalAlignment','bottom')
+        text(0.95*xL(2), Y1,sprintf('r=%.2f [%.2f, %.2f]\n', cc, boot_ci(1), boot_ci(2)),'HorizontalAlignment','right','VerticalAlignment','bottom')
+        % text(0.95*xL(2), Y1,sprintf('r=%.2f', cc),'HorizontalAlignment','right','VerticalAlignment','bottom')
         text(0.95*xL(2), Y2,['ccc=', num2str(ccc)],'HorizontalAlignment','right','VerticalAlignment','bottom')
         box on
 
