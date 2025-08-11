@@ -50,8 +50,7 @@ for rr = 1  : height(fin)
     dispname((end-2):end) = [];
 
     % Plot this condition
-    if wantpatch; patch([time, fliplr(time)], ...
-            [low_lim(rr,:), fliplr(up_lim(rr,:))], colors_rgb{rr},'FaceAlpha',0.2, 'EdgeColor','none', 'HandleVisibility', 'off'); end
+    if wantpatch; 
     hold on
     plot(mean_line(rr,:), 'Color', colors_rgb{rr}, 'LineWidth', 2, 'DisplayName',dispname)
 end
