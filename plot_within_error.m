@@ -50,9 +50,14 @@ for rr = 1  : height(fin)
     dispname((end-2):end) = [];
 
     % Plot this condition
-    if wantpatch; 
+    if wantpatch 
+        patch([time, fliplr(time)], [low_lim(rr,:), fliplr(up_lim(rr,:))], ...
+            colors_rgb{rr},'FaceAlpha',0.2, 'EdgeColor','none', 'HandleVisibility', 'off'); 
+    end
+
+
     hold on
-    plot(mean_line(rr,:), 'Color', colors_rgb{rr}, 'LineWidth', 2, 'DisplayName',dispname)
+    plot(mean_line(rr,:), 'Color', colors_rgb{rr}, 'LineWidth', 1, 'DisplayName',dispname)
 end
 xlim([1, max(time)]);
 legend('Location', 'north')
