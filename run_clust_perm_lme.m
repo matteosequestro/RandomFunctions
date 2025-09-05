@@ -58,6 +58,8 @@ cfg.wantplot_fit = 0;
 
 % [modelout, cluster_beta_exp, cluster_t_exp, cluster_sum]
 [modelout, ~ ,obs_clusters_t, obs_clusters_sum] = check_clusters_lme(data, formula, cfg);
+disp('main model done')
+
 npar = height(modelout.pars.estimates); % number of parameters (or coefficients)
 tslen = width(modelout.pars.estimates); % length of the time-series
 
@@ -74,7 +76,8 @@ cluster_mass(:,1) = obs_clusters_t(:,1);
 for rep = 1:cfg.niter
 
     % Display the current iteration, one 10th at the time
-    if ismember(rep, (0:cfg.niter/10:cfg.niter)); disp([num2str(rep), '/', num2str(cfg.niter)]); end 
+    disp([num2str(rep), '/', num2str(cfg.niter)]); 
+    % if ismember(rep, (0:cfg.niter/10:cfg.niter)); disp([num2str(rep), '/', num2str(cfg.niter)]); end 
 
     % Permute variables within subjects
     perm_data = data;
@@ -175,7 +178,6 @@ end
 
 
 end
-
 
 
 

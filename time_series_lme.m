@@ -1,5 +1,5 @@
 
-function [modelout, cluster_beta_exp, cluster_t_exp, cluster_sum] = check_clusters_lme(data, formula, cfg)
+function [modelout, cluster_full_exp, cluster_sum] = time_series_lme(data, formula, cfg)
 % ----------------------------------------------------------------------------------------------------------------------------------------------
 % Find clusters of effect from parameter estimates in a linear mixed
 % effect model on a time-series
@@ -46,8 +46,8 @@ function [modelout, cluster_beta_exp, cluster_t_exp, cluster_sum] = check_cluste
 % ----------------------------------------------------------------------------------------------------------------------------------------------
 
 % Extract the dependent variable from formula
-y = formula(1:find(formula == '~')-1);
-y = erase(y, ' ');
+y           = formula(1:find(formula == '~')-1);
+y           = erase(y, ' ');
 
 % Length of time sereis
 tslen       = length(data.(y){1});
@@ -65,31 +65,56 @@ adjusted    = loglik;
 % Backup of the dependent variable
 data.y2     = data.(y);
 
-% Precompute number of coefficients
+%%% Define some variables for preallocation and stuff
 tmpset      = data;
 tmpset.tmpy = cellfun(@(x) x(1), tmpset.y2);
 tmpformula  = formula(find(formula == '~'):end);
 tmpformula  = ['tmpy ', tmpformula];
-tmp_rm      = fitlme(tmpset, tmpformula);
+tmp_rm      = fitlme(tmpset, tmpformula); % fit a fake model
 
+% extract number of parameters
 npars       = length(tmp_rm.CoefficientNames);
-modelout.pars.namesout = tmp_rm.CoefficientNames;
 
-% Preallocate vectorw for parameters, CIs and t-values
+% parameter names
+parnames                = tmp_rm.CoefficientNames;
+modelout.pars.namesout  = parnames;
+modelout.ids            = table2array(unique(data(:,tmp_rm.Formula.GroupingVariableNames{1})));  % this works under the assumpotion of a single grouping variable (likely participant id) or that the participant id is the first grouping variable      
+
+% number of subjects (clusters)
+nids        = length(unique(data{:, tmp_rm.Formula.GroupingVariableNames{1}}));
+
+%%% Preallocate vectorw for parameters, CIs and t-values
 estimates   = zeros(npars, tslen);
 lower_ci    = estimates;
 upper_ci    = estimates;
 t_stat      = estimates;
 
+%%% Preallocate array for individual estimates
+full_ind_estimates = NaN(nids, tslen, npars);
 
 % Run the models for each sample point
 if cfg.want_parallel_fit
+
     parfor (tt = 1 : tslen, 10)
         set = data;
         set.(y) = cellfun(@(x) x(tt), data.y2);
         rm = fitlme(set, formula); % the model
 
-        % Export parameters
+        % Get fixed and random effects
+        [~, ~, festats] = fixedEffects(rm);
+        [~, ~, blupstats] = randomEffects(rm); % best linear unbiased predictor
+
+
+        % Compute individual estimate (BLUP + FE)
+        individual_estimates = NaN(nids, 1, npars);
+        for pp = 1 : length(parnames)
+            tp                                      = blupstats(strcmp(blupstats.Name, parnames(pp)) ,:);                 % unpack parameter estimates and info
+            tp.Estimate                             = tp.Estimate + festats.Estimate(strcmp(festats.Name, parnames(pp))); % BLUP + FE
+            individual_estimates(:,:,pp)            = tp.Estimate;                                                        % Export estimate
+        end
+        full_ind_estimates(:, tt, :) = individual_estimates;
+
+        % Export fixed effectsparameters
         estimates(:,tt) = rm.fixedEffects;
         lower_ci(:,tt) = rm.Coefficients(:, end-1);
         upper_ci(:,tt) = rm.Coefficients(:, end);
@@ -111,6 +136,22 @@ else
         set.(y) = cellfun(@(x) x(tt), data.y2);
         rm = fitlme(set, formula); % the model
 
+        % Get fixed and random effects
+        [~, ~, festats] = fixedEffects(rm);
+        [~, ~, blupstats] = randomEffects(rm); % best linear unbiased predictor
+
+        % get parameter names
+        parnames = unique(blupstats.Name);
+
+        % Compute individual estimate (BLUP + FE)
+        individual_estimates = NaN(nids, 1, npars);
+        for pp = 1 : length(parnames)
+            tp                                      = blupstats(strcmp(blupstats.Name, parnames(pp)) ,:);                 % unpack parameter estimates and info
+            tp.Estimate                             = tp.Estimate + festats.Estimate(strcmp(festats.Name, parnames(pp))); % BLUP + FE
+            individual_estimates(:,:,pp)            = tp.Estimate;                                                        % export estimate
+        end
+        full_ind_estimates(:, tt, :) = individual_estimates;
+
         % Export parameters
         estimates(:,tt) = rm.fixedEffects;
         lower_ci(:,tt) = rm.Coefficients(:, end-1);
@@ -129,7 +170,6 @@ else
     end
 end
 
-
 %% Group all the export
 modelout.pars.estimates = estimates;
 modelout.pars.lower_ci = lower_ci;
@@ -143,18 +183,17 @@ modelout.criteria.deviance = deviance;
 
 modelout.rsqrd.ordinary = ordinary;
 modelout.rsqrd.adjusted = adjusted;
+modelout.full_ind_estimates = full_ind_estimates;
 
-% Plot stuff
+%% Plot stuff
 if cfg.wantplot_fit
-    % -------------------------------------------------------------------------------------
-    % Plot parameter estimates
-    % -------------------------------------------------------------------------------------
+    %%% Plot parameter estimates
     % Provide default color if not provided as argument. Give an error if
     % they are not enough to cover all coefficients
     if ~isfield(cfg, 'colors')
         colors = ['#C0C0C0'; '#808080'; '#000000'; '#FFA500'; '#A52A2A'; '#800000'; ...
-          '#1f77b4'; '#2ca02c'; '#d62728'; '#9467bd'];
-        
+            '#1f77b4'; '#2ca02c'; '#d62728'; '#9467bd'];
+
         if height(colors) < npars
             error(['You need to provide ', num2str(npars), ' colors, but you only have ', num2str(height(colors)) ' by default. You need to provide colors manually' ]);
         end
@@ -172,11 +211,16 @@ if cfg.wantplot_fit
     end
 
     figure
-    % Plot each condition
+    
+    %%% Plot each condition
     time = 1:tslen;
     for rr = 1  : npars
-        patch([time, fliplr(time)], [modelout.pars.lower_ci(rr,:), fliplr(modelout.pars.upper_ci(rr,:))], ...
-            colors_rgb{rr},'FaceAlpha',0.2, 'EdgeColor','none', 'HandleVisibility', 'off');
+        patch([time, fliplr(time)], ...
+            [modelout.pars.lower_ci(rr,:), fliplr(modelout.pars.upper_ci(rr,:))], ...
+            colors_rgb{rr}, ...
+            'FaceAlpha',0.2, ...
+            'EdgeColor','none', ...
+            'HandleVisibility', 'off');
         hold on
         plot(modelout.pars.estimates(rr,:), 'Color', colors_rgb{rr}, 'LineWidth', 2, 'DisplayName',modelout.pars.namesout{rr})
     end
@@ -187,9 +231,7 @@ if cfg.wantplot_fit
     title('parameter estimates')
     yline(0, '--', 'HandleVisibility', 'off')
 
-    % -------------------------------------------------------------------------------------
-    % Plot R squared
-    % -------------------------------------------------------------------------------------
+    %%% Plot R squared
     figure
     plot(modelout.rsqrd.ordinary)
     hold on
@@ -200,9 +242,7 @@ if cfg.wantplot_fit
     xlabel('sample')
     yline(0, '--', 'HandleVisibility', 'off')
 
-    % -------------------------------------------------------------------------------------
-    % Plot information criteria (AIC and BIC)
-    % -------------------------------------------------------------------------------------
+    %%% Plot information criteria (AIC and BIC)
     figure
     plot(modelout.criteria.AIC)
     hold on
@@ -213,75 +253,12 @@ if cfg.wantplot_fit
     xlabel('sample')
 end
 
+%%% Find clusters in the estimated coefficient time series
+[cluster_full_exp, cluster_sum] = find_clusters(full_ind_estimates, parnames, cfg);
 
-%% Find clusters
-%(this could probably be done in a easier way but it's the same thing as
-% what i was doing in the other function and non c'ho voglia to find
-% another solution rn)
-cluster_n = 1;
-for pred = 1 : npars
-    clear cluster_full_beta cluster_full_t
-    beta_series = [modelout.pars.estimates(pred, :)', (1 : length(modelout.pars.estimates(pred, :)))'];
-    t_series = [modelout.pars.t_stat(pred, :)', (1 : length(modelout.pars.t_stat(pred, :)))'];
-    tupper_ci = modelout.pars.upper_ci(pred,:);
-    tlower_ci = modelout.pars.lower_ci(pred,:);
-
-    % Clusters here are based on the confidence interval including or not
-    % zero (for the moment I use the default 95%CI, this could be changed
-    % in the function to make it more flexible).
-    clusters_beta_serie = beta_series(tlower_ci > 0 | tupper_ci <0,:);
-    clusters_t_serie = t_series(tlower_ci > 0 | tupper_ci <0,:);
-
-    if ~isempty(clusters_beta_serie)                                              %if you find the cluster...
-        this_beta_cluster = [];
-        this_t_cluster = [];
-
-
-        for sample = 1:length(clusters_beta_serie(:,2))                          %then separate the clusters based on temporal contiguity in the following way:
-            if sample == 1                                                 %if it's the first sample then put it on the list
-                this_beta_cluster = [this_beta_cluster; clusters_beta_serie(sample,:)];
-                this_t_cluster = [this_t_cluster; clusters_t_serie(sample,:)];
-
-            elseif clusters_beta_serie(sample,2) == clusters_beta_serie(sample-1, 2) + 1 %if the next sample is at the successive time point, then put it on the same list (i.e. the list for that cluster)
-                this_beta_cluster = [this_beta_cluster; clusters_beta_serie(sample,:)];
-                this_t_cluster = [this_t_cluster; clusters_t_serie(sample,:)];
-
-            elseif clusters_beta_serie(sample,2) ~= clusters_beta_serie(sample-1, 2) + 1 %if the next sample is not at the successive time point then form a new list
-                cluster_full_beta{cluster_n} = this_beta_cluster;
-                cluster_full_t{cluster_n} = this_t_cluster;
-
-                this_beta_cluster = [[]; clusters_beta_serie(sample,:)];
-                this_t_cluster = [[]; clusters_t_serie(sample,:)];
-                cluster_n = cluster_n + 1;
-            end
-        end
-        cluster_full_beta{cluster_n} = this_beta_cluster;
-        cluster_full_t{cluster_n} = this_t_cluster;
-    else
-        cluster_full_beta = {};
-        cluster_full_t = {};
-    end
-
-    % Delete clusters smaller than minlength.
-    cluster_full_beta= cluster_full_beta(cellfun(@(x) length(x) >= cfg.minlength,  cluster_full_beta));
-    cluster_full_t= cluster_full_t(cellfun(@(x) length(x) >= cfg.minlength,  cluster_full_t));
-
-    % Save info for each cluster
-    cluster_sum(pred,:).pred =  modelout.pars.namesout{pred};
-    cluster_sum(pred,:).length  = cellfun(@(x) size(x, 1), cluster_full_beta);
-
-    cluster_sum(pred,:).first   = cellfun(@(x) x(1, 2), cluster_full_beta);
-    cluster_sum(pred,:).last    = cellfun(@(x) x(end, 2), cluster_full_beta);
-    cluster_sum(pred,:).mass   = cellfun(@(x) sum(x(:,1)), cluster_full_beta);
-    cluster_sum(pred,:).abs_mass   = cellfun(@(x) sum(abs(x(:,1))), cluster_full_beta);
-
-    if isempty(cluster_full_beta); cluster_full_beta = {NaN}; end
-    if isempty(cluster_full_t); cluster_full_t = {NaN}; end
-    cluster_beta_exp(pred, :) = {modelout.pars.namesout{pred}, cluster_full_beta};
-    cluster_t_exp(pred, :) = {modelout.pars.namesout{pred}, cluster_full_t};
-end
 
 
 end
+
 
 

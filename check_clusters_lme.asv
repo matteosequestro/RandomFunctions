@@ -236,7 +236,6 @@ for pred = 1 : npars
         this_beta_cluster = [];
         this_t_cluster = [];
 
-
         for sample = 1:length(clusters_beta_serie(:,2))                          %then separate the clusters based on temporal contiguity in the following way:
             if sample == 1                                                 %if it's the first sample then put it on the list
                 this_beta_cluster = [this_beta_cluster; clusters_beta_serie(sample,:)];
@@ -283,5 +282,6 @@ end
 
 
 end
+
 
 

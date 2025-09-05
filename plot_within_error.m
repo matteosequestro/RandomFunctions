@@ -1,7 +1,7 @@
 function plot_within_error(fin, errortype, colors)
 
 
-
+within_error
 % Provide default color if not provided as argument. Give an error if
 % they are not enough to cover all conditions
 if ~exist('colors', 'var')
